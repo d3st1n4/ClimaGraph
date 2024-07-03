@@ -32,16 +32,7 @@ def write_to_file(cities_dict):
 
     # Create a new table for each city
     for city, dataframe in cities_dict.items():
-        city_table = (
-            city.replace(" ", "_")
-                .replace(",", "")
-                .replace("(", "")
-                .replace(")", "")
-                .replace("User_entered:", "")
-                .replace("-", "_")
-                .replace("__", "_")
-                .replace("'", "")
-        )
+        city_table = normalize_city_name(city)
 
         c.execute(f'''CREATE TABLE IF NOT EXISTS {city_table} (
                         date TEXT,
@@ -49,13 +40,28 @@ def write_to_file(cities_dict):
                         temperature_2m_min REAL,
                         uv_index_max REAL,
                         precipitation_sum REAL,
-                        wind_speed_10m_max REAL)''')
+                        wind_speed_10m_max REAL,
+                        shortwave_radiation_sum REAL)''')
 
         # Write the dataframe to the table
         dataframe.to_sql(city_table, conn, if_exists='replace', index=False)
 
     conn.commit()
     conn.close()
+
+
+def normalize_city_name(city_name):
+    #Normalize the city name to match the table naming convention
+    return (
+        city_name.replace(" ", "_")
+            .replace(",", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("User_entered:", "")
+            .replace("-", "_")
+            .replace("__", "_")
+            .replace("'", "")
+    )
 
 
 def query_database():
@@ -67,17 +73,18 @@ def query_database():
     while True:
         user_input_city = input(
             "Enter the name of the city you want to query: "
-        )
+        ).strip().lower()  # Normalize input
 
         # Attempt to find a city in the database that matches
         # Or partially matches the user input
         c.execute(
-            f"SELECT name FROM sqlite_master WHERE type='table';"
-            )
+            "SELECT name FROM sqlite_master WHERE type='table';"
+        )
         tables = c.fetchall()
         city_table = None
         for table in tables:
-            if user_input_city in table[0]:
+            normalized_table_name = table[0].replace("_", "").lower()  # Normalize table name
+            if user_input_city in normalized_table_name:
                 city_table = table[0]
                 break
 
@@ -85,25 +92,25 @@ def query_database():
             print(
                 "Error: City not found in database. "
                 "Please enter a valid city name."
-                )
+            )
             continue
 
         try:
             break
         except ValueError:
             print(
-                "Error: City not found in database."
+                "Error: City not found in database. "
                 "Please enter a valid city name."
-                )
+            )
 
     # Get the date range the user wants
     while True:
         start_date = input(
             "Enter the start date (format: yyyy-mm-dd): "
-            )
+        )
         end_date = input(
             "Enter the end date (format: yyyy-mm-dd): "
-            )
+        )
 
         try:
             # Validate the date format
@@ -112,7 +119,7 @@ def query_database():
             break
         except ValueError:
             print(
-                "Error: Invalid date format."
+                "Error: Invalid date format. "
                 "Please enter the date in yyyy-mm-dd format."
             )
 
@@ -141,7 +148,6 @@ def query_database():
             csv_writer.writerows(results)   # Write data rows
 
         print(f"Results saved to {filename}")
-        return
     else:
         print("No results found for the specified criteria.")
 
@@ -460,88 +466,74 @@ def weather_archive(user_start, user_end):
 def main():
     database_empty = True
     while True:
-        # Prompt user to either add new data or query the database, or exit
-        choice = input(
-            "Enter '1' to add new data,"
-            " '2' to query the database,"
-            " or '3' to exit: "
-        )
-        if choice == '1':
-            while True:
-                user_start = ensure_valid_date(
-                    "Enter a start date (format: yyyy-mm-dd): "
-                )
-                user_end = ensure_valid_date(
-                    "Enter an end date (format: yyyy-mm-dd): "
-                )
-                error_code = check_range(user_start, user_end)
+        try:
+            # Prompt user to either add new data or query the database, or exit
+            choice = input("Enter '1' to add new data, '2' to query the database, or '3' to exit: ")
+            if choice == '1':
+                while True:
+                    user_start = ensure_valid_date("Enter a start date (format: yyyy-mm-dd): ")
+                    user_end = ensure_valid_date("Enter an end date (format: yyyy-mm-dd): ")
+                    error_code = check_range(user_start, user_end)
 
-                if error_code == 0:
-                    break
-                elif error_code == -1:
-                    print(
-                        "Error: "
-                        "Ensure that the start date is before the end date."
-                    )
-                elif error_code == -2:
-                    print("Error: Start date cannot be before 1940-01-01.")
-                elif error_code == -3:
-                    print(
-                        f"Error: End date cannot be after the current date "
-                        f"({datetime.now().date()})."
-                        )
+                    if error_code == 0:
+                        break
+                    elif error_code == -1:
+                        print("Error: Ensure that the start date is before the end date.")
+                    elif error_code == -2:
+                        print("Error: Start date cannot be before 1940-01-01.")
+                    elif error_code == -3:
+                        print(f"Error: End date cannot be after the current date ({datetime.now().date()}).")
 
-            # If the start date is before 2016, use the archive API
-            pre_2016 = check_date(user_start)
-            if pre_2016:
-                cities_dict = weather_archive(user_start, user_end)
-            else:
-                cities_dict = weather_forecast(user_start, user_end)
-
-            # Output the list of variables
-            dataframe_list = list(cities_dict.values())
-            temp_col = dataframe_list[0]
-            for i, variable in enumerate(temp_col):
-                print(f"{i + 1}. {variable}")
-
-            # Input validation for variable index
-            while True:
-                try:
-                    selected_index = int(input(
-                        "Enter which variable index you would "
-                        "like to graph for the selected cities: "
-                    ))
-                except ValueError:
-                    print("Error: Please enter an integer index.")
-                    continue
-
-                if selected_index in range(1, i + 1):
-                    break
+                # If the start date is before 2016, use the archive API
+                pre_2016 = check_date(user_start)
+                if pre_2016:
+                    cities_dict = weather_archive(user_start, user_end)
                 else:
-                    print("Error: Please enter an index in range.")
+                    cities_dict = weather_forecast(user_start, user_end)
 
-            # Find the variable name for the given index
-            target_var = ""
-            for j, variable in enumerate(temp_col):
-                if j == selected_index - 1:
-                    target_var = variable
-                    break
-            create_graph(cities_dict, target_var)
+                # Output the list of variables
+                dataframe_list = list(cities_dict.values())
+                temp_col = dataframe_list[0]
+                for i, variable in enumerate(temp_col):
+                    print(f"{i + 1}. {variable}")
 
-            database_empty = False
+                # Input validation for variable index
+                while True:
+                    try:
+                        selected_index = int(input("Enter which variable index you would like to graph for the selected cities: "))
+                    except ValueError:
+                        print("Error: Please enter an integer index.")
+                        continue
 
-        elif choice == '2':
-            if database_empty:
-                print(
-                    "Database empty, please add data before "
-                    "attempting to query the database"
-                )
+                    if selected_index in range(1, i + 1):
+                        break
+                    else:
+                        print("Error: Please enter an index in range.")
+
+                # Find the variable name for the given index
+                target_var = ""
+                for j, variable in enumerate(temp_col):
+                    if j == selected_index - 1:
+                        target_var = variable
+                        break
+                create_graph(cities_dict, target_var)
+
+                database_empty = False
+
+            elif choice == '2':
+                if database_empty:
+                    print("Database empty, please add data before attempting to query the database")
+                else:
+                    query_database()
+            elif choice == '3':
+                print("\nProgram exited by user.")
+                exit()
             else:
-                query_database()
-        elif choice == '3':
+                print("Invalid choice. Please enter '1', '2', or '3'.")
+        except KeyboardInterrupt:
+            print("\nProgram exited by user.")
             exit()
-        else:
-            print("Invalid choice. Please enter '1', '2', or '3'.")
+
 
 
 if __name__ == "__main__":
