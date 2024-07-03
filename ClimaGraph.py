@@ -12,7 +12,6 @@ from matplotlib.font_manager import FontProperties
 import sqlite3
 import csv
 import time  # Added for time.sleep() usage
-import re
 
 # Setup the Open-Meteo API client with cache and retry on error
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
@@ -51,7 +50,7 @@ def write_to_file(cities_dict):
 
 
 def normalize_city_name(city_name):
-    #Normalize the city name to match the table naming convention
+    # Normalize the city name to match the table naming convention
     return (
         city_name.replace(" ", "_")
             .replace(",", "")
@@ -83,7 +82,7 @@ def query_database():
         tables = c.fetchall()
         city_table = None
         for table in tables:
-            normalized_table_name = table[0].replace("_", "").lower()  # Normalize table name
+            normalized_table_name = table[0].replace("_", "").lower()
             if user_input_city in normalized_table_name:
                 city_table = table[0]
                 break
@@ -533,7 +532,6 @@ def main():
         except KeyboardInterrupt:
             print("\nProgram exited by user.")
             exit()
-
 
 
 if __name__ == "__main__":
