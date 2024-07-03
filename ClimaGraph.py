@@ -53,13 +53,13 @@ def normalize_city_name(city_name):
     # Normalize the city name to match the table naming convention
     return (
         city_name.replace(" ", "_")
-            .replace(",", "")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("User_entered:", "")
-            .replace("-", "_")
-            .replace("__", "_")
-            .replace("'", "")
+                 .replace(",", "")
+                 .replace("(", "")
+                 .replace(")", "")
+                 .replace("User_entered:", "")
+                 .replace("-", "_")
+                 .replace("__", "_")
+                 .replace("'", "")
     )
 
 
@@ -467,21 +467,27 @@ def main():
     while True:
         try:
             # Prompt user to either add new data or query the database, or exit
-            choice = input("Enter '1' to add new data, '2' to query the database, or '3' to exit: ")
+            choice = input("Enter '1' to add new data, "
+                           "'2' to query the database, or '3' to exit: ")
             if choice == '1':
                 while True:
-                    user_start = ensure_valid_date("Enter a start date (format: yyyy-mm-dd): ")
-                    user_end = ensure_valid_date("Enter an end date (format: yyyy-mm-dd): ")
+                    user_start = ensure_valid_date("Enter a start date "
+                                                   "(format: yyyy-mm-dd): ")
+                    user_end = ensure_valid_date("Enter an end date "
+                                                 "(format: yyyy-mm-dd): ")
                     error_code = check_range(user_start, user_end)
 
                     if error_code == 0:
                         break
                     elif error_code == -1:
-                        print("Error: Ensure that the start date is before the end date.")
+                        print(
+                            "Error: Ensure that the start "
+                            "date is before the end date.")
                     elif error_code == -2:
                         print("Error: Start date cannot be before 1940-01-01.")
                     elif error_code == -3:
-                        print(f"Error: End date cannot be after the current date ({datetime.now().date()}).")
+                        print(f"Error: End date cannot be after the current date 
+                              ({datetime.now().date()}).")
 
                 # If the start date is before 2016, use the archive API
                 pre_2016 = check_date(user_start)
@@ -499,7 +505,10 @@ def main():
                 # Input validation for variable index
                 while True:
                     try:
-                        selected_index = int(input("Enter which variable index you would like to graph for the selected cities: "))
+                        selected_index = int(input("Enter which variable "
+                                                   "index you would like to "
+                                                   "graph for the selected "
+                                                   "cities: "))
                     except ValueError:
                         print("Error: Please enter an integer index.")
                         continue
@@ -521,7 +530,8 @@ def main():
 
             elif choice == '2':
                 if database_empty:
-                    print("Database empty, please add data before attempting to query the database")
+                    print("Database empty, please add data before "
+                          "attempting to query the database")
                 else:
                     query_database()
             elif choice == '3':
