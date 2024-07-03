@@ -486,8 +486,9 @@ def main():
                     elif error_code == -2:
                         print("Error: Start date cannot be before 1940-01-01.")
                     elif error_code == -3:
-                        print(f"Error: End date cannot be after the current date 
-                              ({datetime.now().date()}).")
+                        print(f"Error: End date cannot "
+                              "be after the current date "
+                              "({datetime.now().date()}).")
 
                 # If the start date is before 2016, use the archive API
                 pre_2016 = check_date(user_start)
